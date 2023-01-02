@@ -1,38 +1,31 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import BaseInlineFormSet
-from .models import Article, Scope, ArticleScope
+from .models import Article, Scopes, Tag
 
 
-class RelationshipInlineFormset(BaseInlineFormSet):
+class ArticleInlineFormset(BaseInlineFormSet):
+
     def clean(self):
-        super(RelationshipInlineFormset, self).clean()
-        main = []
+        chosen_main = 0
         for form in self.forms:
-            if not hasattr(form, 'cleaned_data'):
-                continue
+            if form.cleaned_data.get('is_main'):
+                chosen_main += 1
+        if not chosen_main:
+            raise ValidationError('Укажите основной раздел')
+        elif chosen_main > 1:
+            raise ValidationError('Основным может быть только один раздел')
+        return super().clean()  # вызываем базовый код переопределяемого метода
 
-            main.append(form.cleaned_data['is_main'])
-
-        if main.count(True) < 1:
-            raise ValidationError('<1')
-        elif main.count(True) > 1:
-            raise ValidationError('>1')
-        else:
-            return
-
-
-class RelationshipInline(admin.TabularInline):
-    model = Scope
-    formset = RelationshipInlineFormset
-    extra = 0
-
+class ArticleInline(admin.TabularInline):
+    model = Scopes
+    formset = ArticleInlineFormset
 
 @admin.register(Article)
-class ObjectAdmin(admin.ModelAdmin):
-    inlines = [RelationshipInline]
+class ArticleAdmin(admin.ModelAdmin):
+    inlines = [ArticleInline]
 
 
-@admin.register(ArticleScope)
-class ObjectAdmin(admin.ModelAdmin):
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
     pass
